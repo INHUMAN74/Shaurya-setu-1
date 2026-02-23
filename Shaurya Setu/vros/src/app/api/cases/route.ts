@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "../../../../lib/db";
 import ReintegrationCase from "../../../../models/ReintegrationCase";
 import CaseStage from "../../../../models/CaseStage";
@@ -37,12 +38,56 @@ function validateRequestBody(body: unknown): { valid: boolean; data?: Record<str
     return { valid: false, error: "expectedEndDate must be after startDate" };
   }
 
+  if (data.veteranId !== undefined && !mongoose.Types.ObjectId.isValid(data.veteranId as string)) {
+    return { valid: false, error: "veteranId must be a valid ObjectId" };
+  }
+
   const status = data.status as string | undefined;
   if (status !== undefined && !["active", "paused", "completed"].includes(status)) {
     return { valid: false, error: "status must be active, paused, or completed" };
   }
 
   return { valid: true, data };
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    await connectDB();
+    const searchParams = request.nextUrl.searchParams;
+    const veteranId = searchParams.get("veteranId");
+    const status = searchParams.get("status");
+
+    let query: Record<string, unknown> = {};
+    if (veteranId) {
+      query.veteranId = veteranId;
+    }
+    if (status) {
+      query.status = status;
+    }
+
+    const cases = await ReintegrationCase.find(query)
+      .populate("veteranId", "fullName serviceNumber branch")
+      .lean()
+      .sort({ createdAt: -1 });
+
+    return NextResponse.json({
+      success: true,
+      data: cases.map((c) => ({
+        id: c._id,
+        veteranId: c.veteranId,
+        status: c.status,
+        startDate: c.startDate,
+        expectedEndDate: c.expectedEndDate,
+        createdAt: c.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching cases:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch cases" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -63,8 +108,8 @@ export async function POST(request: NextRequest) {
     const status = (validation.data!.status as string) ?? "active";
 
     const reintegrationCase = await ReintegrationCase.create({
-      veteranId,
-      status,
+      veteranId: veteranId as string,
+      status: status as "active" | "paused" | "completed",
       startDate: new Date(startDate as string),
       expectedEndDate: new Date(expectedEndDate as string),
     });

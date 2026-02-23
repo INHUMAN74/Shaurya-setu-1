@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB } from "../../../../../lib/db";
-import CaseStage from "../../../../../models/CaseStage";
-import CaseTask from "../../../../../models/CaseTask";
+import mongoose from "mongoose";
+import { connectDB } from "../../../../../../lib/db";
+import CaseStage from "../../../../../../models/CaseStage";
+import CaseTask from "../../../../../../models/CaseTask";
 
 export async function GET(
   request: NextRequest,

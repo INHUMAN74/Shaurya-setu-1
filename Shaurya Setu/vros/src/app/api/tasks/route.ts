@@ -48,6 +48,51 @@ function validateRequestBody(body: unknown): { valid: boolean; data?: Record<str
   return { valid: true, data };
 }
 
+export async function GET(request: NextRequest) {
+  try {
+    await connectDB();
+    const searchParams = request.nextUrl.searchParams;
+    const assignedTo = searchParams.get("assignedTo");
+    const stageId = searchParams.get("stageId");
+
+    let query: Record<string, unknown> = {};
+    if (assignedTo) {
+      query.assignedTo = assignedTo;
+    }
+    if (stageId) {
+      query.stageId = stageId;
+    }
+
+    const tasks = await CaseTask.find(query)
+      .populate("stageId", "stageType caseId")
+      .populate({
+        path: "stageId",
+        populate: { path: "caseId", populate: { path: "veteranId", select: "fullName" } },
+      })
+      .lean()
+      .sort({ createdAt: -1 });
+
+    return NextResponse.json({
+      success: true,
+      data: tasks.map((t) => ({
+        id: t._id,
+        stageId: t.stageId,
+        title: t.title,
+        assignedTo: t.assignedTo,
+        dueDate: t.dueDate,
+        status: t.status,
+        createdAt: t.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch tasks" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -74,11 +119,11 @@ export async function POST(request: NextRequest) {
     }
 
     const task = await CaseTask.create({
-      stageId,
+      stageId: stageId as string,
       title: (title as string).trim(),
       assignedTo: assignedTo ?? undefined,
       dueDate: dueDate ? new Date(dueDate as string) : undefined,
-      status,
+      status: status as "todo" | "in_progress" | "done",
     });
 
     return NextResponse.json(

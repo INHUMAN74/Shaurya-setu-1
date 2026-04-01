@@ -45,6 +45,10 @@ function validateRequestBody(body: unknown): { valid: boolean; data?: Record<str
     return { valid: false, error: "stageId must be a valid ObjectId" };
   }
 
+  if (data.assignedTo !== undefined && !mongoose.Types.ObjectId.isValid(data.assignedTo as string)) {
+    return { valid: false, error: "assignedTo must be a valid ObjectId string or omitted" };
+  }
+
   return { valid: true, data };
 }
 
@@ -121,7 +125,7 @@ export async function POST(request: NextRequest) {
     const task = await CaseTask.create({
       stageId: stageId as string,
       title: (title as string).trim(),
-      assignedTo: assignedTo ?? undefined,
+      assignedTo: assignedTo as string | undefined,
       dueDate: dueDate ? new Date(dueDate as string) : undefined,
       status: status as "todo" | "in_progress" | "done",
     });

@@ -56,6 +56,18 @@ export default function CaseTimeline({ caseId }: CaseTimelineProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedStageId, setExpandedStageId] = useState<string | null>(null);
+  const [printing, setPrinting] = useState(false);
+
+  useEffect(() => {
+    const onBefore = () => setPrinting(true);
+    const onAfter = () => setPrinting(false);
+    window.addEventListener("beforeprint", onBefore);
+    window.addEventListener("afterprint", onAfter);
+    return () => {
+      window.removeEventListener("beforeprint", onBefore);
+      window.removeEventListener("afterprint", onAfter);
+    };
+  }, []);
 
   useEffect(() => {
     async function fetchStages() {
@@ -117,7 +129,7 @@ export default function CaseTimeline({ caseId }: CaseTimelineProps) {
 
         <ul className="space-y-0">
           {stages.map((stage, index) => {
-            const isExpanded = expandedStageId === stage.id;
+            const isExpanded = printing || expandedStageId === stage.id;
             const hasTasks = stage.tasks.length > 0;
 
             return (
@@ -149,8 +161,8 @@ export default function CaseTimeline({ caseId }: CaseTimelineProps) {
                 <div className="min-w-0 flex-1">
                   <button
                     type="button"
-                    onClick={() => setExpandedStageId(isExpanded ? null : stage.id)}
-                    className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-4 text-left transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600 dark:hover:bg-slate-800/50"
+                    onClick={() => setExpandedStageId(isExpanded && !printing ? null : stage.id)}
+                    className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-4 text-left transition hover:border-slate-300 hover:bg-slate-50 print:pointer-events-none dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600 dark:hover:bg-slate-800/50"
                   >
                     <span className="font-medium text-slate-900 dark:text-slate-100">
                       {STAGE_LABELS[stage.stageType]}
@@ -162,7 +174,7 @@ export default function CaseTimeline({ caseId }: CaseTimelineProps) {
                     </span>
                     {hasTasks && (
                       <svg
-                        className={`h-5 w-5 shrink-0 text-slate-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                        className={`h-5 w-5 shrink-0 text-slate-400 transition-transform print:hidden ${isExpanded ? "rotate-180" : ""}`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"

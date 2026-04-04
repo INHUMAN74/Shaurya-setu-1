@@ -12,16 +12,30 @@ interface Veteran {
   userId: { email: string };
 }
 
+type VerifiedFilter = "all" | "verified" | "pending";
+
 export default function CounsellorVeteransPage() {
   const [veterans, setVeterans] = useState<Veteran[]>([]);
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [verifiedFilter, setVerifiedFilter] = useState<VerifiedFilter>("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchInput.trim()), 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  useEffect(() => {
     async function fetchVeterans() {
+      setLoading(true);
       try {
-        const url = search ? `/api/veterans?search=${encodeURIComponent(search)}` : "/api/veterans";
-        const res = await fetch(url);
+        const params = new URLSearchParams();
+        if (debouncedSearch) params.set("search", debouncedSearch);
+        if (verifiedFilter === "verified") params.set("verified", "true");
+        if (verifiedFilter === "pending") params.set("verified", "false");
+        const q = params.toString();
+        const res = await fetch(q ? `/api/veterans?${q}` : "/api/veterans");
         const data = await res.json();
         if (data.success) {
           setVeterans(data.data || []);
@@ -33,20 +47,47 @@ export default function CounsellorVeteransPage() {
       }
     }
     fetchVeterans();
-  }, [search]);
+  }, [debouncedSearch, verifiedFilter]);
 
   return (
     <div>
       <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Veterans</h1>
-      <div className="mt-6">
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        Search by name or service number. Filter by verification status.
+      </p>
+
+      <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <input
           type="text"
           placeholder="Search by name or service number..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          className="w-full max-w-md rounded-lg border border-zinc-300 bg-white px-4 py-2 text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
         />
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              { id: "all" as const, label: "All" },
+              { id: "verified" as const, label: "Verified" },
+              { id: "pending" as const, label: "Pending" },
+            ] as const
+          ).map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setVerifiedFilter(f.id)}
+              className={`rounded-lg px-4 py-2 text-sm font-medium ${
+                verifiedFilter === f.id
+                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                  : "bg-white text-zinc-700 hover:bg-zinc-50 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
+
       {loading ? (
         <div className="mt-6 flex items-center justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-600 dark:border-t-zinc-400" />

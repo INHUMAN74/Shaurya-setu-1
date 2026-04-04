@@ -62,9 +62,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const homeHref = ROLE_HOME[role] ?? "/dashboard";
 
   return (
-    <div className="flex min-h-screen bg-zinc-50 dark:bg-zinc-950">
+    <div className="flex min-h-screen bg-zinc-50 print:block print:min-h-0 dark:bg-zinc-950">
       {/* Sidebar */}
-      <aside className="flex w-56 shrink-0 flex-col border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+      <aside className="flex w-56 shrink-0 flex-col border-r border-zinc-200 bg-white print:hidden dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex h-14 items-center gap-2 border-b border-zinc-200 px-4 dark:border-zinc-800">
           <Link href={homeHref} className="font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
             Shaurya Setu
@@ -104,7 +104,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       {/* Main content */}
-      <main className="min-w-0 flex-1 p-6">{children}</main>
+      <main className="min-w-0 flex-1 p-6 print:max-w-none print:p-0">{children}</main>
     </div>
   );
 }

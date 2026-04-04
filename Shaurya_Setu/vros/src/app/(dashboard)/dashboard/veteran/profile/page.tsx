@@ -12,6 +12,7 @@ interface VeteranProfile {
   yearsOfService: number;
   dischargeType: string;
   verified: boolean;
+  verificationDocumentName?: string;
 }
 
 export default function VeteranProfilePage() {
@@ -20,6 +21,8 @@ export default function VeteranProfilePage() {
   const [profile, setProfile] = useState<VeteranProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState("");
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     fullName: "",
@@ -77,6 +80,32 @@ export default function VeteranProfilePage() {
       setError("Something went wrong. Please try again.");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleMockUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !profile) return;
+    setUploadMsg("");
+    setUploading(true);
+    try {
+      const res = await fetch(`/api/veterans/${profile.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verificationDocumentName: file.name }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProfile({ ...profile, verificationDocumentName: file.name });
+        setUploadMsg("Recorded for verification (demo — file not stored on server).");
+      } else {
+        setUploadMsg(data.error ?? "Could not record file name.");
+      }
+    } catch {
+      setUploadMsg("Something went wrong.");
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -232,6 +261,27 @@ export default function VeteranProfilePage() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Verification document (demo)</h2>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          Upload a discharge or ID document for admin review. This demo only saves the file name—no real file storage.
+        </p>
+        {profile.verificationDocumentName ? (
+          <p className="mt-3 text-sm text-zinc-800 dark:text-zinc-200">
+            <span className="font-medium">On file:</span> {profile.verificationDocumentName}
+          </p>
+        ) : (
+          <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">No document recorded yet.</p>
+        )}
+        <label className="mt-4 inline-flex cursor-pointer items-center gap-2">
+          <span className="rounded-lg border border-zinc-300 bg-zinc-50 px-4 py-2 text-sm font-medium text-zinc-800 hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700">
+            {uploading ? "Working…" : "Choose file"}
+          </span>
+          <input type="file" className="sr-only" disabled={uploading} onChange={handleMockUpload} accept=".pdf,.jpg,.jpeg,.png" />
+        </label>
+        {uploadMsg && <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-400">{uploadMsg}</p>}
       </div>
     </div>
   );

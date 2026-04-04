@@ -8,6 +8,8 @@ export interface IVeteranProfile extends Document {
   yearsOfService: number;
   dischargeType: string;
   verified: boolean;
+  /** Demo: last "uploaded" document filename (no real file storage). */
+  verificationDocumentName?: string;
   createdAt: Date;
 }
 
@@ -41,6 +43,10 @@ const VeteranProfileSchema = new Schema<IVeteranProfile>(
     verified: {
       type: Boolean,
       default: false,
+    },
+    verificationDocumentName: {
+      type: String,
+      default: "",
     },
     createdAt: {
       type: Date,

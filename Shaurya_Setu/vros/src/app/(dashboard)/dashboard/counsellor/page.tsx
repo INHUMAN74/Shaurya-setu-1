@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import HorizontalBarChart from "@/components/HorizontalBarChart";
 
 interface Case {
   id: string;
@@ -11,22 +12,34 @@ interface Case {
   expectedEndDate: string;
 }
 
+interface StatsPayload {
+  veteranCount: number;
+  cases: { active: number; paused: number; completed: number };
+  overdueTaskCount: number;
+}
+
 export default function CounsellorDashboardPage() {
   const [stats, setStats] = useState({ active: 0, paused: 0, completed: 0 });
+  const [overview, setOverview] = useState<StatsPayload | null>(null);
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch("/api/cases");
-        const data = await res.json();
-        if (data.success) {
-          setCases(data.data || []);
-          const active = data.data.filter((c: Case) => c.status === "active").length;
-          const paused = data.data.filter((c: Case) => c.status === "paused").length;
-          const completed = data.data.filter((c: Case) => c.status === "completed").length;
+        const [casesRes, statsRes] = await Promise.all([fetch("/api/cases"), fetch("/api/stats")]);
+        const casesData = await casesRes.json();
+        const statsData = await statsRes.json();
+
+        if (casesData.success) {
+          setCases(casesData.data || []);
+          const active = casesData.data.filter((c: Case) => c.status === "active").length;
+          const paused = casesData.data.filter((c: Case) => c.status === "paused").length;
+          const completed = casesData.data.filter((c: Case) => c.status === "completed").length;
           setStats({ active, paused, completed });
+        }
+        if (statsData.success && statsData.data) {
+          setOverview(statsData.data);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -45,26 +58,47 @@ export default function CounsellorDashboardPage() {
     );
   }
 
+  const caseBarItems = [
+    { label: "Active", value: overview?.cases.active ?? stats.active, colorClass: "bg-blue-500" },
+    { label: "Paused", value: overview?.cases.paused ?? stats.paused, colorClass: "bg-amber-500" },
+    { label: "Completed", value: overview?.cases.completed ?? stats.completed, colorClass: "bg-emerald-500" },
+  ];
+
   return (
     <div>
       <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Dashboard</h1>
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Overview of veterans, cases, and open work.</p>
+
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Active Cases</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Registered veterans</p>
+          <p className="mt-1 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">
+            {overview?.veteranCount ?? "—"}
+          </p>
+        </div>
+        <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Active cases</p>
           <p className="mt-1 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{stats.active}</p>
         </div>
         <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Paused Cases</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">Paused cases</p>
           <p className="mt-1 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{stats.paused}</p>
         </div>
-        <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">Completed Cases</p>
-          <p className="mt-1 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{stats.completed}</p>
+        <div className="rounded-lg border border-red-200 bg-red-50/80 p-4 dark:border-red-900/40 dark:bg-red-950/20">
+          <p className="text-sm text-red-800 dark:text-red-300">Overdue tasks</p>
+          <p className="mt-1 text-2xl font-semibold text-red-900 dark:text-red-200">
+            {overview?.overdueTaskCount ?? "—"}
+          </p>
         </div>
       </div>
+
+      <div className="mt-6 lg:max-w-md">
+        <HorizontalBarChart title="Cases by status" items={caseBarItems} />
+      </div>
+
       <div className="mt-8">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Recent Cases</h2>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Recent cases</h2>
           <Link
             href="/dashboard/counsellor/cases"
             className="text-sm font-medium text-zinc-700 hover:underline dark:text-zinc-300"

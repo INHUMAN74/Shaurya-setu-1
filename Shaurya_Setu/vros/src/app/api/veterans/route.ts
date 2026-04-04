@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         ],
       };
     }
-    if (verified !== null) {
+    if (verified === "true" || verified === "false") {
       query.verified = verified === "true";
     }
 
@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
         yearsOfService: v.yearsOfService,
         dischargeType: v.dischargeType,
         verified: v.verified,
+        verificationDocumentName: v.verificationDocumentName ?? "",
         createdAt: v.createdAt,
       })),
     });
@@ -149,6 +150,7 @@ export async function POST(request: NextRequest) {
           yearsOfService: veteranProfile.yearsOfService,
           dischargeType: veteranProfile.dischargeType,
           verified: veteranProfile.verified,
+          verificationDocumentName: veteranProfile.verificationDocumentName ?? "",
           createdAt: veteranProfile.createdAt,
         },
       },

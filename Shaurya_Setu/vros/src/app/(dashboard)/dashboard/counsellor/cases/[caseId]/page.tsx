@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import CaseTimeline from "@/components/CaseTimeline";
+import CaseNotesPanel from "@/components/CaseNotesPanel";
 
 interface Case {
   id: string;
@@ -13,15 +14,39 @@ interface Case {
   expectedEndDate: string;
 }
 
+interface EmployerOption {
+  id: string;
+  email: string;
+}
+
 export default function CaseDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const caseId = params.caseId as string;
   const [case_, setCase] = useState<Case | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddTask, setShowAddTask] = useState(false);
-  const [newTask, setNewTask] = useState({ stageId: "", title: "", dueDate: "" });
+  const [newTask, setNewTask] = useState({ stageId: "", title: "", dueDate: "", assignedTo: "" });
   const [stages, setStages] = useState<any[]>([]);
+  const [employers, setEmployers] = useState<EmployerOption[]>([]);
+
+  useEffect(() => {
+    async function fetchEmployers() {
+      try {
+        const res = await fetch("/api/users");
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data)) {
+          setEmployers(
+            data.data
+              .filter((u: { role: string }) => u.role === "employer")
+              .map((u: { id: string; email: string }) => ({ id: u.id, email: u.email }))
+          );
+        }
+      } catch (e) {
+        console.error("Error fetching users:", e);
+      }
+    }
+    fetchEmployers();
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -57,12 +82,13 @@ export default function CaseDetailPage() {
           stageId: newTask.stageId,
           title: newTask.title,
           dueDate: newTask.dueDate || undefined,
+          ...(newTask.assignedTo ? { assignedTo: newTask.assignedTo } : {}),
         }),
       });
       const data = await res.json();
       if (data.success) {
         setShowAddTask(false);
-        setNewTask({ stageId: "", title: "", dueDate: "" });
+        setNewTask({ stageId: "", title: "", dueDate: "", assignedTo: "" });
         const stagesRes = await fetch(`/api/cases/${caseId}/stages`);
         const stagesData = await stagesRes.json();
         if (stagesData.success) {
@@ -193,6 +219,23 @@ export default function CaseDetailPage() {
                   className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                 />
               </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Assign to employer (optional)
+                </label>
+                <select
+                  value={newTask.assignedTo}
+                  onChange={(e) => setNewTask({ ...newTask, assignedTo: e.target.value })}
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-zinc-900 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+                >
+                  <option value="">Unassigned</option>
+                  {employers.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <button
                 type="submit"
                 className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
@@ -204,6 +247,7 @@ export default function CaseDetailPage() {
         )}
         <CaseTimeline caseId={caseId} />
       </div>
+      <CaseNotesPanel caseId={caseId} />
     </div>
   );
 }

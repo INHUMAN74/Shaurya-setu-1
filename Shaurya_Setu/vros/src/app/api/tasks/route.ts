@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectDB } from "../../../../lib/db";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../../../lib/auth";
 import CaseTask from "../../../../models/CaseTask";
 import CaseStage from "../../../../models/CaseStage";
 
@@ -54,6 +56,11 @@ function validateRequestBody(body: unknown): { valid: boolean; data?: Record<str
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     await connectDB();
     const searchParams = request.nextUrl.searchParams;
     const assignedTo = searchParams.get("assignedTo");
@@ -99,6 +106,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || (session.user.role !== "counsellor" && session.user.role !== "admin")) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const validation = validateRequestBody(body);
 

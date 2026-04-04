@@ -28,6 +28,7 @@ export default function CaseDetailPage() {
   const [newTask, setNewTask] = useState({ stageId: "", title: "", dueDate: "", assignedTo: "" });
   const [stages, setStages] = useState<any[]>([]);
   const [employers, setEmployers] = useState<EmployerOption[]>([]);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   useEffect(() => {
     async function fetchEmployers() {
@@ -100,6 +101,46 @@ export default function CaseDetailPage() {
     }
   }
 
+  async function updateCaseStatus(status: string) {
+    if (!case_) return;
+    setUpdatingStatus(true);
+    try {
+      const res = await fetch(`/api/cases/${caseId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCase({ ...case_, status: data.data.status });
+      }
+    } catch (e) {
+      console.error("Error updating case status:", e);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  }
+
+  async function updateStageStatus(stageId: string, status: string) {
+    try {
+      const res = await fetch(`/api/cases/${caseId}/stages/${stageId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const stagesRes = await fetch(`/api/cases/${caseId}/stages`);
+        const stagesData = await stagesRes.json();
+        if (stagesData.success) {
+          setStages(stagesData.data);
+        }
+      }
+    } catch (e) {
+      console.error("Error updating stage status:", e);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -147,10 +188,19 @@ export default function CaseDetailPage() {
                 <span>{typeof case_.veteranId === "object" ? case_.veteranId.fullName || "Unknown" : "Unknown"}</span>
               )}
             </p>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <div className="mt-1 flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
               <span className="font-medium">Status:</span>{" "}
-              <span className="capitalize">{case_.status.replace("_", " ")}</span>
-            </p>
+              <select
+                value={case_.status}
+                disabled={updatingStatus}
+                onChange={(e) => updateCaseStatus(e.target.value)}
+                className="rounded border border-zinc-300 bg-white px-2 py-0.5 text-xs font-medium capitalize text-zinc-900 focus:border-zinc-500 focus:outline-none dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              >
+                <option value="active">Active</option>
+                <option value="paused">Paused</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
               <span className="font-medium">Start Date:</span> {new Date(case_.startDate).toLocaleDateString()}
             </p>
@@ -159,6 +209,28 @@ export default function CaseDetailPage() {
               {new Date(case_.expectedEndDate).toLocaleDateString()}
             </p>
           </div>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="mb-4 text-lg font-semibold text-zinc-900 dark:text-zinc-100">Stage Status Control</h2>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {stages.map((stage) => (
+            <div key={stage.id} className="rounded-md border border-zinc-100 bg-zinc-50/50 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
+              <p className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                {stage.stageType}
+              </p>
+              <select
+                value={stage.status}
+                onChange={(e) => updateStageStatus(stage.id, e.target.value)}
+                className="mt-2 w-full rounded border border-zinc-200 bg-white px-2 py-1 text-xs font-medium capitalize text-zinc-800 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+              >
+                <option value="pending">Pending</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+          ))}
         </div>
       </div>
       <div className="mt-6">

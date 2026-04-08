@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../../../../../lib/auth";
+import type { Session } from "next-auth";
+import { getAppSession } from "../../../../../../lib/get-app-session";
 import { connectDB } from "../../../../../../lib/db";
 import ReintegrationCase from "../../../../../../models/ReintegrationCase";
 import VeteranProfile from "../../../../../../models/VeteranProfile";
 import CaseNote from "../../../../../../models/CaseNote";
 
-type SessionWithUser = NonNullable<Awaited<ReturnType<typeof getServerSession>>> & {
-  user: { id: string; role: string };
-};
+type SessionWithUser = Session & { user: { id: string; role: string } };
 
 async function canAccessCase(session: SessionWithUser, caseId: string): Promise<"full" | "none" | "veteran_read"> {
   await connectDB();
@@ -28,11 +26,11 @@ async function canAccessCase(session: SessionWithUser, caseId: string): Promise<
 }
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ caseId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAppSession(request);
     if (!session?.user?.id) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
@@ -73,7 +71,7 @@ export async function POST(
   { params }: { params: Promise<{ caseId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAppSession(request);
     if (!session?.user?.id) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }

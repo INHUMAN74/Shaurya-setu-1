@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import { connectDB } from "../../../../lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../../../lib/auth";
+import { getAppSession } from "../../../../lib/get-app-session";
 import ReintegrationCase from "../../../../models/ReintegrationCase";
 import CaseStage from "../../../../models/CaseStage";
 
@@ -94,7 +93,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAppSession(request);
     if (!session?.user?.id || (session.user.role !== "counsellor" && session.user.role !== "admin")) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }

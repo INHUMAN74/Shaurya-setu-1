@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../../../../lib/auth";
+import { getAppSession } from "../../../../../lib/get-app-session";
 import { connectDB } from "../../../../../lib/db";
 import VeteranProfile from "../../../../../models/VeteranProfile";
 import ReintegrationCase from "../../../../../models/ReintegrationCase";
@@ -58,7 +57,7 @@ export async function PATCH(
   { params }: { params: Promise<{ veteranId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAppSession(request);
     if (!session?.user?.id) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }

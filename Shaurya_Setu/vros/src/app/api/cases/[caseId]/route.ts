@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "../../../../../lib/db";
 import ReintegrationCase from "../../../../../models/ReintegrationCase";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../../../../lib/auth";
+import { getAppSession } from "../../../../../lib/get-app-session";
 
 export async function GET(
   request: NextRequest,
@@ -48,7 +47,7 @@ export async function PATCH(
   { params }: { params: Promise<{ caseId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAppSession(request);
     if (!session?.user?.id || (session.user.role !== "counsellor" && session.user.role !== "admin")) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }

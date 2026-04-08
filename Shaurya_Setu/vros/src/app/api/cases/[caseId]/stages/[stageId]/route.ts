@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "../../../../../../../lib/db";
 import CaseStage from "../../../../../../../models/CaseStage";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../../../../../../lib/auth";
+import { getAppSession } from "../../../../../../../lib/get-app-session";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ caseId: string; stageId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAppSession(request);
     if (!session?.user?.id || (session.user.role !== "counsellor" && session.user.role !== "admin")) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
